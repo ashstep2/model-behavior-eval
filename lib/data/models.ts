@@ -9,8 +9,8 @@ export const MODELS: ModelConfig[] = [
   },
   {
     provider: 'openai',
-    modelId: 'gpt-5.2-pro',
-    displayName: 'GPT-5.2 Pro',
+    modelId: 'gpt-5-mini',
+    displayName: 'GPT-5 Mini',
     description: 'Balanced performance and speed',
   },
   {
