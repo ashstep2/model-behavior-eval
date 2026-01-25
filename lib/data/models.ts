@@ -1,0 +1,60 @@
+import { ModelConfig } from '@/types';
+
+export const MODELS: ModelConfig[] = [
+  {
+    provider: 'openai',
+    modelId: 'gpt-5.2',
+    displayName: 'GPT-5.2',
+    description: "OpenAI's most capable model",
+  },
+  {
+    provider: 'openai',
+    modelId: 'gpt-5.2-pro',
+    displayName: 'GPT-5.2 Pro',
+    description: 'Balanced performance and speed',
+  },
+  {
+    provider: 'openai',
+    modelId: 'gpt-5-nano',
+    displayName: 'GPT-5 Nano',
+    description: 'Fastest, lowest cost',
+  },
+  {
+    provider: 'anthropic',
+    modelId: 'claude-opus-4-5-20251101',
+    displayName: 'Claude Opus 4.5',
+    description: 'Most capable Claude model',
+  },
+  {
+    provider: 'anthropic',
+    modelId: 'claude-sonnet-4-20250514',
+    displayName: 'Claude Sonnet 4',
+    description: 'Best balance of speed and capability',
+  },
+  {
+    provider: 'anthropic',
+    modelId: 'claude-3-5-haiku-20241022',
+    displayName: 'Claude Haiku 3.5',
+    description: 'Fastest Claude model',
+  }
+];
+
+export const MODEL_MAP: Record<string, ModelConfig> = MODELS.reduce(
+  (acc, model) => {
+    acc[model.modelId] = model;
+    return acc;
+  },
+  {} as Record<string, ModelConfig>
+);
+
+export function getModelConfig(modelId: string): ModelConfig | undefined {
+  return MODEL_MAP[modelId];
+}
+
+export function getModelDisplayName(modelId: string): string {
+  return MODEL_MAP[modelId]?.displayName || modelId;
+}
+
+export function getModelsByProvider(provider: 'anthropic' | 'openai'): ModelConfig[] {
+  return MODELS.filter((m) => m.provider === provider);
+}
