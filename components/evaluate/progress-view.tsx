@@ -59,8 +59,8 @@ export function ProgressView({
             <div className="mb-2 text-xs font-medium uppercase text-gray-400">
               Prompt
             </div>
-            <div className="line-clamp-3 font-mono text-sm text-gray-600">
-              {currentTest.prompt}
+            <div className="max-h-32 overflow-y-auto font-mono text-sm text-gray-600">
+              <pre className="whitespace-pre-wrap">{currentTest.prompt}</pre>
             </div>
           </div>
 

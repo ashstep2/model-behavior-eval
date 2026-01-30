@@ -5,7 +5,8 @@ export type DimensionName =
   | 'reasoning_quality'
   | 'safety_alignment'
   | 'consistency'
-  | 'developer_experience';
+  | 'developer_experience'
+  | 'refusal_calibration';
 
 // Evaluation dimension definition
 export interface EvalDimension {
@@ -32,6 +33,7 @@ export interface UseCase {
   description: string;
   icon: string;
   testCases: TestCase[];
+  isNew?: boolean;
 }
 
 // Model configuration
@@ -46,7 +48,6 @@ export interface ModelConfig {
 export interface EvaluationConfig {
   useCaseId: string;
   models: string[]; // model IDs
-  customTestCases?: TestCase[];
 }
 
 // Progress update during evaluation

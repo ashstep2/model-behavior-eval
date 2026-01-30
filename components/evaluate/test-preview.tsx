@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { TestCase } from '@/types';
 import { getDimensionDisplayName } from '@/lib/data/dimensions';
+import { ExpandableText } from '@/components/ui/expandable-text';
 
 interface TestPreviewProps {
   testCases: TestCase[];
@@ -76,8 +77,13 @@ function TestCaseItem({ testCase, isExpanded, onToggle }: TestCaseItemProps) {
             <div className="mb-1 text-xs font-medium uppercase text-gray-400">
               Prompt
             </div>
-            <div className="whitespace-pre-wrap rounded-md bg-gray-50 p-3 font-mono text-sm text-black">
-              {testCase.prompt}
+            <div className="rounded-md bg-gray-50 p-3">
+              <ExpandableText
+                text={testCase.prompt}
+                maxLines={8}
+                className="font-mono text-sm text-black"
+                bgColor="gray"
+              />
             </div>
           </div>
 

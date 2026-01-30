@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { TestResult } from '@/types';
 import { getModelDisplayName } from '@/lib/data/models';
 import { getDimensionDisplayName } from '@/lib/data/dimensions';
+import { ExpandableText } from '@/components/ui/expandable-text';
 
 interface TestDetailProps {
   results: TestResult[];
@@ -88,8 +89,12 @@ function TestResultItem({ result, isExpanded, onToggle }: TestResultItemProps) {
             <div className="mb-2 text-xs font-medium uppercase text-gray-400">
               Prompt
             </div>
-            <div className="whitespace-pre-wrap rounded-md bg-white p-4 font-mono text-sm text-black">
-              {testCase.prompt}
+            <div className="rounded-md bg-white p-4">
+              <ExpandableText
+                text={testCase.prompt}
+                maxLines={8}
+                className="font-mono text-sm text-black"
+              />
             </div>
           </div>
 
@@ -118,10 +123,22 @@ function TestResultItem({ result, isExpanded, onToggle }: TestResultItemProps) {
                         {response.latencyMs}ms
                       </span>
                     </div>
-                    <div className="max-h-48 overflow-y-auto p-4">
-                      <pre className="whitespace-pre-wrap font-mono text-xs text-gray-600">
-                        {response.response || response.error || 'No response'}
-                      </pre>
+                    <div className="p-4">
+                      {response.error ? (
+                        <div className="rounded bg-red-50 p-2 text-xs text-red-600">
+                          <span className="font-medium">Error:</span> {response.error}
+                        </div>
+                      ) : response.response ? (
+                        <ExpandableText
+                          text={response.response}
+                          maxLines={10}
+                          className="font-mono text-xs text-gray-600"
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-400 italic">
+                          No response (model may have refused)
+                        </div>
+                      )}
                     </div>
                     {score && (
                       <div className="border-t border-gray-100 px-4 py-2 text-sm">

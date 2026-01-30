@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { UseCaseCard, CustomEvalCard } from '@/components/dashboard/use-case-card';
+import { UseCaseCard } from '@/components/dashboard/use-case-card';
 import { RecentList } from '@/components/dashboard/recent-list';
 import { USE_CASES } from '@/lib/data/use-cases';
 import { useEvaluationStore, useRecentEvaluations } from '@/store/evaluation-store';
@@ -15,12 +15,6 @@ export default function Dashboard() {
   const handleSelectUseCase = (useCaseId: string) => {
     reset();
     setUseCase(useCaseId);
-    router.push('/evaluate');
-  };
-
-  const handleCustomEval = () => {
-    reset();
-    setUseCase('custom');
     router.push('/evaluate');
   };
 
@@ -49,7 +43,6 @@ export default function Dashboard() {
               onSelect={handleSelectUseCase}
             />
           ))}
-          <CustomEvalCard onSelect={handleCustomEval} />
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import { getUseCase } from '@/lib/data/use-cases';
 import { runEvaluation } from '@/lib/evaluation/runner';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes max for long-running evaluations
 
 export async function GET(
   request: NextRequest,

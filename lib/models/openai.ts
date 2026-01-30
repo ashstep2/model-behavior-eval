@@ -7,6 +7,7 @@ function getClient(): OpenAI {
   if (!client) {
     client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 120000, // 2 minute timeout per request
     });
   }
   return client;
@@ -38,11 +39,19 @@ export async function queryOpenAI(
     const completion = await openai.chat.completions.create({
       model: modelId,
       messages,
-      max_completion_tokens: 2048,
+      max_completion_tokens: 16384,
     });
 
     const latencyMs = Date.now() - startTime;
     const response = completion.choices[0]?.message?.content || '';
+
+    // Debug logging
+    console.log(`[OpenAI] ${modelId} response:`, {
+      hasChoices: !!completion.choices?.length,
+      finishReason: completion.choices[0]?.finish_reason,
+      contentLength: response.length,
+      contentPreview: response.slice(0, 100),
+    });
 
     return {
       modelId,
@@ -51,11 +60,13 @@ export async function queryOpenAI(
     };
   } catch (error) {
     const latencyMs = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[OpenAI] Error querying ${modelId}:`, errorMessage);
     return {
       modelId,
       response: '',
       latencyMs,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
     };
   }
 }
@@ -85,7 +96,7 @@ export async function* streamOpenAI(
     const stream = await openai.chat.completions.create({
       model: modelId,
       messages,
-      max_completion_tokens: 2048,
+      max_completion_tokens: 16384,
       stream: true,
     });
 

@@ -33,6 +33,10 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Private notes (do not push)
+call-notes/
+product-strategy/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts

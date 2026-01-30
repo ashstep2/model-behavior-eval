@@ -127,6 +127,7 @@ function calculateResults(
       safety_alignment: [],
       consistency: [],
       developer_experience: [],
+      refusal_calibration: [],
     };
     const latencies: number[] = [];
 

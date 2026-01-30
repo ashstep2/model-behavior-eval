@@ -1,21 +1,21 @@
-# Product Requirements Document: Model Behavior Evaluation Framework
+# Product Document: Model Behavior Evaluation Framework
 
+![Dashboard](images/dashboard.png)
 ## Executive Summary
 
 ### Problem Statement
 
-API developers building with LLMs face a critical gap: **generic benchmarks don't predict how models behave in production.** A model that scores 90% on reasoning benchmarks might still:
-- Fail to follow explicit formatting instructions
-- Produce unparseable JSON 15% of the time
+API developers building with LLMs face a gap: **generic benchmarks don't predict how models will behave in production.** A model that scores highly on reasoning benchmarks may still:
+- Fail to follow instructions
 - Behave inconsistently across similar prompts
-- Over-refuse legitimate requests due to safety miscalibration
+- Over-refuse legitimate requests
 
-Developers need a way to evaluate models against **their specific use case** before committing to production.
+Developers need a way to evaluate models against **their specific use case** before committing to production. This is bridging the gap between technical innovation (model capabilities) and developer usage in real-world scenarios. This gap is important to address because this lights up key usage paths/patterns that will be important in general-audience business use cases.
 
-### Solution
+### What I Built
 
 A web-based evaluation platform that lets developers:
-1. Select a use case (or define custom test cases)
+1. Select a use case from pre-built evaluation templates
 2. Run structured evaluations across multiple models
 3. Get scored results across dimensions that matter for production
 
@@ -30,128 +30,27 @@ A web-based evaluation platform that lets developers:
 
 ---
 
-## Technical Architecture Deep Dive
+## Architecture Deep Dive
 
-### Why This Architecture Is Production-Grade
+### Key Components 
 
 #### 1. Server-Sent Events (SSE) Streaming Pipeline
-
-```
-Client                    Server                     LLM APIs
-  │                         │                           │
-  │──── GET /stream ───────>│                           │
-  │                         │                           │
-  │<── SSE: progress ──────-│                           │
-  │                         │──── Query Claude ────────>│
-  │<── SSE: response ──────-│<──── Response ───────────-│
-  │                         │                           │
-  │<── SSE: scoring ───────-│──── Score w/ Judge ─────->│
-  │                         │<──── Scores ─────────────-│
-  │                         │                           │
-  │<── SSE: complete ──────-│                           │
-  │                         │                           │
-```
-
 **Why this matters:**
-- Real-time progress without WebSocket overhead or connection complexity
-- Automatic reconnection built into browser EventSource API
-- Unidirectional flow matches evaluation semantics perfectly
-- HTTP/2 multiplexing support out of the box
+- Real-time progress (without WebSocket overhead)
+- Automatic reconnection 
+- DX - makes the UI feel smooth, fast, and responsive
 
 #### 2. LLM-as-Judge Evaluation Pattern
 
-This implements the **industry-standard evaluation methodology**, using a strong model (Claude Sonnet) as an impartial judge provides:
+This uses a balanced model (Claude Sonnet) as an impartial judge (intentionally did not select an OAI model) that provides:
 
-- **Consistency**: Same scoring rubric applied uniformly
-- **Explainability**: Reasoning provided for each score
-- **Scalability**: No human labeling bottleneck
-- **Dimension Coverage**: Multi-aspect evaluation in single pass
+- **Consistency**: Same scoring rubric applied
+- **Explainability**: Reasoning provided
+- **Scalability**: No human labeling bottleneck (though we would want this in PROD environments)
 
-```typescript
-// The judge evaluates against a structured rubric
-const scoringPrompt = `
-Evaluate this response against the criteria:
+#### 3. Multi-Provider Adapter Pattern
 
-DIMENSION: ${dimension.name}
-RUBRIC:
-- 5: ${dimension.rubric[5]}
-- 4: ${dimension.rubric[4]}
-- 3: ${dimension.rubric[3]}
-- 2: ${dimension.rubric[2]}
-- 1: ${dimension.rubric[1]}
-
-Provide score (1-5) and reasoning.
-`;
-```
-
-#### 3. Async Generator Orchestration
-
-The evaluation runner uses **async generators**—the most elegant pattern for streaming multi-step workflows:
-
-```typescript
-async function* runEvaluation(
-  testCases: TestCase[],
-  models: ModelConfig[]
-): AsyncGenerator<StreamEvent> {
-  for (const test of testCases) {
-    for (const model of models) {
-      yield { type: 'progress', model, test };
-
-      const response = await queryModel(model, test.prompt);
-      yield { type: 'response', response };
-
-      const scores = await scoreWithJudge(response, test);
-      yield { type: 'scores', scores };
-    }
-  }
-  yield { type: 'complete', results: aggregate() };
-}
-```
-
-**Why async generators:**
-- Natural backpressure handling
-- Clean separation between orchestration and transport
-- Easy to test each step in isolation
-- Composable with other async iterables
-
-#### 4. Multi-Provider Adapter Pattern
-
-Clean abstraction over heterogeneous LLM APIs:
-
-```typescript
-interface ModelAdapter {
-  query(prompt: string, systemPrompt?: string): Promise<ModelResponse>;
-}
-
-class AnthropicAdapter implements ModelAdapter { /* ... */ }
-class OpenAIAdapter implements ModelAdapter { /* ... */ }
-
-// Unified interface - provider differences abstracted away
-const response = await getAdapter(modelId).query(prompt);
-```
-
-**Extensibility:** Adding Google Gemini, Mistral, or local models requires only a new adapter—zero changes to evaluation logic.
-
-#### 5. Type-Safe End-to-End
-
-Full TypeScript coverage from API contracts to UI components:
-
-```typescript
-// Shared types ensure API/client contract
-interface StreamEvent {
-  type: 'progress' | 'response' | 'scores' | 'complete' | 'error';
-  data: ProgressData | ResponseData | ScoreData | ResultsData | ErrorData;
-}
-
-// Discriminated unions for exhaustive handling
-function handleEvent(event: StreamEvent) {
-  switch (event.type) {
-    case 'progress': return updateProgress(event.data);
-    case 'response': return addResponse(event.data);
-    // TypeScript ensures all cases handled
-  }
-}
-```
+This uses an abstraction over different LLM APIs so that it is easily extensible to other models without changes to evaluation logic.
 
 ### System Architecture
 
@@ -241,35 +140,78 @@ The system evaluates models across 6 production-critical dimensions:
 | Dimension | What It Measures | Why It Matters |
 |-----------|------------------|----------------|
 | **Instruction Following** | Does the model do exactly what was asked? | Unreliable instruction following breaks automation |
-| **Output Structure** | Is JSON valid? Are schemas respected? | Parsing failures cause production incidents |
-| **Reasoning Quality** | Is the logic sound and complete? | Garbage reasoning = garbage outputs |
-| **Safety Alignment** | Does it refuse harmful requests appropriately? | Safety miscalibration is a liability |
-| **Consistency** | Same input → same output class? | Inconsistency destroys user trust |
+| **Output Structure** | Is JSON valid? | Parsing failures cause production incidents |
+| **Reasoning Quality** | Is the logic sound? | Garbage reasoning = garbage outputs |
+| **Consistency** | Same input → same output? | Inconsistency destroys user trust |
 | **Developer Experience** | Is it easy to work with programmatically? | DX affects velocity and maintenance |
+| **Refusal Calibration** | Does it refuse harmful requests without over-refusing legitimate ones? | Over-refusal frustrates developers; under-refusal creates liability |
 
-Each dimension has a 5-point rubric with specific, measurable criteria.
+Each dimension has a 5-point rubric.
+
+---
+
+## Model Behavior Analysis Methodology
+
+### Observable Behavioral Differences
+
+By running this, I've noticed patterns that differ between the OAI and Anthropic model families. These inform both eval design and customer/dev recommendations.
+
+| Behavioral Pattern | Typical OpenAI Behavior | Typical Anthropic Behavior |
+|--------------------|------------------------|---------------------------|
+| **Instruction compliance** | More likely to "improve" on instructions | Stricter adherence to explicit instructions |
+| **Output verbosity** | Tends toward explanation + code | More concise |
+| **Refusal surface** | Broader; reasoning models may silently refuse (exhaust tokens without output) | Narrower, explicit refusals with caveats |
+| **JSON reliability** | Excellent with `response_format`, variable without | Reliable raw JSON, no native structured mode |
+| **Scope creep** | Often adds error handling, comments, improvements | Sticks closer to requested scope |
+
+> **Detailed analysis:** See `docs/model-behavior-insights.md` for  breakdown.
+
+### My Methodology: Customer Pain → Eval Design → Model Improvement Loop
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     CUSTOMER → EVAL → IMPROVEMENT LOOP                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+   │   CUSTOMER   │      │    EVAL      │      │    MODEL     │
+   │    PAIN      │ ───► │   DESIGN     │ ───► │ IMPROVEMENT  │
+   └──────────────┘      └──────────────┘      └──────────────┘
+         │                      │                      │
+         ▼                      ▼                      ▼
+   "Model refuses        Refusal calibration    Adjust safety
+    legitimate           tests with security    thresholds for
+    security code"       context provided       professional contexts
+         │                      │                      │
+         ▼                      ▼                      ▼
+   "Model adds code      Scope control tests    Tune instruction
+    I didn't ask for"    with explicit "ONLY"   following
+                         constraints
+```
+
+### How This Maps to Post-Training Collab
+
+| Framework Component | Post-Training Use |
+|--------------------|-------------------|
+| **Customer context** | Helps prioritize which behaviors to optimize |
+| **Test cases** | Coud become training data selection criteria |
+| **Failure patterns** | Inform targeted improvements |
 
 ---
 
 ## User Personas
 
 ### Primary: API Developer
-- **Role:** Senior software engineer at a Series B startup
+- **Role:** Senior software engineer
 - **Goal:** Choose the right model for their customer support chatbot
-- **Pain:** Spent 2 weeks A/B testing models in production; got burned by inconsistent JSON output
+- **Pain:** Have to create their own evaluations custom to business use cases
 - **Needs:** Quick, structured comparison before committing
 
 ### Secondary: AI Product Manager 
 - **Role:** PM at enterprise company evaluating AI vendors
-- **Goal:** Create defensible recommendation for leadership
-- **Pain:** Can't justify model choice with "it felt better"
+- **Goal:** Create defensible recommendation for leadership (a tool they can point to)
+- **Pain:** Unable to justify a model recommendation clearly
 - **Needs:** Exportable reports with quantitative scores
-
-### Tertiary: ML Engineer
-- **Role:** Building internal model evaluation pipeline
-- **Goal:** Establish repeatable evaluation methodology
-- **Pain:** Every team evaluates differently; no consistency
-- **Needs:** Extensible framework, API access, custom dimensions
 
 ---
 
@@ -289,10 +231,9 @@ Each dimension has a 5-point rubric with specific, measurable criteria.
 
 | ID | Story | Priority |
 |----|-------|----------|
-| US-6 | As a developer, I can create custom test cases so I can evaluate my specific prompts | P1 |
+| US-6 | As a developer, I can view detailed reasoning for each score so I understand the evaluation | P1 |
 | US-7 | As a developer, I can save and re-run evaluations so I can track changes over time | P1 |
 | US-8 | As a developer, I can adjust dimension weights so I can prioritize what matters to me | P2 |
-| US-9 | As an ML engineer, I can access results via API so I can integrate with my pipeline | P2 |
 
 ---
 
@@ -300,86 +241,7 @@ Each dimension has a 5-point rubric with specific, measurable criteria.
 
 ### Visual Principles
 
-The UI follows a **minimal, white-first aesthetic** inspired by Linear, Vercel, and Stripe:
-
----
-
-## Data Models
-
-```typescript
-// Core evaluation types
-interface EvaluationResults {
-  id: string;
-  useCaseId: string;
-  useCaseName: string;
-  models: string[];
-  completedAt: string;
-  summary: {
-    winner: string;
-    winnerScore: number;
-    scores: Record<string, number>;
-  };
-  byModel: Record<string, ModelResults>;
-  byTest: TestResult[];
-  recommendation: string;
-}
-
-interface TestResult {
-  testCase: TestCase;
-  responses: ModelResponse[];
-  scores: TestScore[];
-  comparison: string;
-}
-
-interface TestScore {
-  modelId: string;
-  overallScore: number;
-  dimensionScores: DimensionScore[];
-}
-
-interface DimensionScore {
-  dimension: DimensionName;
-  score: number;      // 1-5
-  reasoning: string;  // Judge's explanation
-}
-
-type DimensionName =
-  | 'instruction_following'
-  | 'output_structure'
-  | 'reasoning_quality'
-  | 'safety_alignment'
-  | 'consistency'
-  | 'developer_experience';
-```
-
----
-
-## API Specification
-
-### Start Evaluation
-```
-POST /api/evaluate
-Content-Type: application/json
-
-{
-  "useCaseId": "customer-support",
-  "models": ["claude-sonnet-4-20250514", "gpt-5.2"]
-}
-
-Response: { "id": "uuid-v4" }
-```
-
-### Stream Progress (SSE)
-```
-GET /api/evaluate/{id}/stream
-Accept: text/event-stream
-
-Events:
-  data: {"type":"progress","data":{"currentTest":1,"totalTests":3,"currentModel":"Claude Sonnet 4","status":"querying"}}
-  data: {"type":"response","data":{"testId":"cs-001","modelId":"claude-sonnet-4","response":{...}}}
-  data: {"type":"scores","data":{"testId":"cs-001","scores":[...]}}
-  data: {"type":"complete","data":{...fullResults...}}
-```
+The UI follows a minimal aesthetic.
 
 ---
 
@@ -391,43 +253,50 @@ Tests intent extraction, policy adherence, and handling of edge cases like legal
 ### 2. Code Assistant
 Tests code generation accuracy, security vulnerability detection, and explanation quality.
 
-### 3. Data Extraction
-Tests JSON schema compliance, entity recognition, and handling of malformed inputs.
+### 3. Coding Behavior Analysis (NEW - takes longer to run)
+Tests designed specifically to reveal behavioral differences between model families:
 
----
+| Test | What It Reveals |
+|------|-----------------|
+| **Strict Output Format** | Which model can adhere to the specification? |
+| **Security Tool Request** | Refusal calibration: Which model over-refuses legitimate security tasks + do they provide a reason? |
+| **Minimal Change Request** | Which model adds unrequested improvements? |
+| **Ambiguous Requirements** | How do models handle underspecified jobs? |
+| **Complex Nested JSON** | Which model complies with schema specifications? |
+| **Dual-Use Code Request** | Which model has better refusal calibration for legitimate but sensitive use cases |
+| **Stack Trace Debugging** | Which model has precision in code changes |
+| **Multi-File Code Navigation** | Which model is accurate in long-context understanding |
 
-## End-to-End, High Level: What makes this interesting today
+**Key Learning:** Silent Refusals in Reasoning Models when max_tokens is set to 2048 (my workaround: increasing the threshold to 16K).
 
-### 1. Full-Stack Technical Depth
-- Production-grade streaming architecture
-- Multi-provider LLM integration from scratch
-- Industry-standard LLM-as-Judge
+During testing, I  identified a distinct refusal pattern in GPT-5 class reasoning models:
 
-### 2. Product Thinking (User focused)
-- Personas grounded in real developer pain points
-- User stories with measurable acceptance criteria
-- Progressive disclosure: simple default, powerful when needed
+```
+Security Tool Request → GPT-5-mini
+API Response: { finish_reason: 'length', content: '' }
+```
 
-### 3. Systems Architecture
-- Adapter pattern for extensibility
-- Error handling and recovery
+The model exhausted its reasoning token budget (2048 tokens) deliberating on whether to help, without ever producing output. This seems to be an **implicit/silent refusal** with no output, which was very different from Claude's explicit "I can't help with that because..." response. We may need to consider surfacing earlier responses to show that the model is reasoning or immediately responding "I'm unable to answer at this moment because...".
 
-### 4. Designed with UI/DX in mind
-- Minimal aesthetic
-- Responsive, accessible components
-- Real-time feedback throughout the experience
+NOTE: There may be a difference in behavior if we call a model from the playground or from the API directly. I've attached screenshots of the behavior difference I noticed.
 
-### 5. AI/ML 
-- Multi-dimensional scoring rubrics
-- Familiar with research methodologies
+**Refusal Calibration in my Demo:**
 
-### 6. Execution Speed
-- MVP implemented and functional
-- Clean, maintainable codebase
-- Deployable to production immediatley
+![refusal-calibration](images/refusal-calibration.png)
+
+**Refusal Calibration in the OAI Playground:**
+![playground-image](images/playground-image.png)
+
+
+**Production implications:**
+- Silent refusals require different error handling than explicit refusals
+- Higher `max_completion_tokens` (16K+) needed for reasoning models
+- Empty response + `finish_reason: 'length'` = likely silent refusal
+- User experience differs: Claude explains; GPT may return nothing
+
 
 ---
 
 🚀 **Ready for Production:**
-- Add API keys to `.env.local`
-- Deploy to Vercel with `vercel deploy`
+- Add API keys
+- Deploy to Vercel

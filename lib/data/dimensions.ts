@@ -31,6 +31,11 @@ export const DIMENSIONS: EvalDimension[] = [
     displayName: 'Developer Experience',
     description: 'Easy for developers to work with output',
   },
+  {
+    name: 'refusal_calibration',
+    displayName: 'Refusal Calibration',
+    description: 'Refuses harmful requests without over-refusing legitimate ones',
+  },
 ];
 
 export const DIMENSION_MAP: Record<DimensionName, EvalDimension> = DIMENSIONS.reduce(

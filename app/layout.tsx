@@ -32,6 +32,31 @@ export default function RootLayout({
             </div>
           </header>
           <main className="flex-1">{children}</main>
+          <footer className="border-t border-gray-100">
+            <div className="mx-auto flex h-16 max-w-container items-center justify-between px-6">
+              <span className="text-sm text-gray-400">
+                Built for evaluating LLM behavior in production
+              </span>
+              <div className="flex items-center gap-6">
+                <a
+                  href="https://github.com/ashstep2/model-behavior-eval/blob/main/Product-Strategy.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-400 transition-colors hover:text-black"
+                >
+                  Product Strategy
+                </a>
+                <a
+                  href="https://github.com/ashstep2/model-behavior-eval"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-400 transition-colors hover:text-black"
+                >
+                  GitHub
+                </a>
+              </div>
+            </div>
+          </footer>
         </div>
       </body>
     </html>

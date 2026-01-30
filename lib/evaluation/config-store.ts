@@ -7,7 +7,17 @@ interface EvaluationConfig {
   startedAt: string;
 }
 
-const evaluationConfigs = new Map<string, EvaluationConfig>();
+// Use globalThis to persist across Next.js hot reloads in development
+const globalForConfigs = globalThis as unknown as {
+  evaluationConfigs: Map<string, EvaluationConfig> | undefined;
+};
+
+const evaluationConfigs =
+  globalForConfigs.evaluationConfigs ?? new Map<string, EvaluationConfig>();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForConfigs.evaluationConfigs = evaluationConfigs;
+}
 
 export function setEvaluationConfig(
   evaluationId: string,

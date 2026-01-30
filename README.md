@@ -1,8 +1,26 @@
 # Model Behavior Eval
 
+![Dashboard](images/dashboard.png)
+
 A production-grade evaluation platform for comparing LLM behavior across models. Built with Next.js 14, TypeScript, and real-time streaming.
 
-**[View the Full PRD →](./Product-Strategy.md)**
+**[View the Full Product Strategy →](./PRODUCT_STRATEGY.md)** | **[Model Behavior Insights →](./docs/model-behavior-insights.md)**
+
+---
+
+## Key Finding: The "Goldilocks" Effect
+
+When comparing GPT-5.2, GPT-5 Mini, and GPT-5 Nano on coding behavior tasks:
+
+| Model | Score | Refusal Calibration |
+|-------|-------|---------------------|
+| **GPT-5 Mini** | **4.7/5** | 5.0/5 |
+| GPT-5.2 | 4.1/5 | 2.0/5 |
+| GPT-5 Nano | 4.0/5 | 2.0/5 |
+
+**The mid-tier model outperformed the flagship** due to better refusal calibration. GPT-5.2 over-refused legitimate security and accessibility tool requests, while Mini correctly assessed context.
+
+[See full evaluation results →](./outputs/evaluation-analysis-FINAL.md)
 
 ---
 
@@ -12,8 +30,8 @@ Generic benchmarks don't predict how models behave in production. A model scorin
 
 - Fail to follow explicit formatting instructions
 - Produce unparseable JSON 15% of the time
-- Behave inconsistently across similar prompts
-- Over-refuse legitimate requests
+- Over-refuse legitimate requests (security tools, accessibility features)
+- Silently refuse by exhausting token budgets without output
 
 **This tool lets you evaluate models against your specific use case before committing to production.**
 
@@ -21,10 +39,11 @@ Generic benchmarks don't predict how models behave in production. A model scorin
 
 ## Features
 
-- **Pre-built use cases** — Customer Support, Code Assistant, Data Extraction
-- **Multi-model comparison** — Claude (Opus, Sonnet, Haiku) + GPT-5 (5.2, 5.2 Mini, Nano)
+- **Pre-built use cases** — Customer Support, Code Assistant, Data Extraction, **Coding Behavior Analysis (New)**
+- **Multi-model comparison** — Claude (Opus, Sonnet, Haiku) + GPT-5 (5.2, Mini, Nano)
 - **Real-time streaming** — Live progress with Server-Sent Events
 - **LLM-as-Judge scoring** — Multi-dimensional evaluation with reasoning
+- **Refusal calibration testing** — Catch over-refusals before they frustrate users
 - **Export to Markdown** — Shareable reports for team decision-making
 
 ---
@@ -87,19 +106,20 @@ Open [http://localhost:3000](http://localhost:3000)
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Key Technical Decisions
+### Key Decisions
 
 | Decision | Why |
 |----------|-----|
 | **LLM-as-Judge** | Scalable, consistent, explainable scoring |
-| **Async Generators** | Clean streaming orchestration |
 | **Adapter Pattern** | Easy to add new model providers |
+| **SSE Streaming** | Real-time progress without WebSocket complexity |
+| **16K token limit** | Prevents silent refusals in reasoning models |
 
 ---
 
 ## Evaluation Dimensions
 
-Models are scored 1-5 across six production-critical dimensions:
+Models are scored 1-5 across 7 dimensions:
 
 | Dimension | What It Measures |
 |-----------|------------------|
@@ -109,93 +129,25 @@ Models are scored 1-5 across six production-critical dimensions:
 | **Safety Alignment** | Does it refuse harmful requests appropriately? |
 | **Consistency** | Same input → same output class? |
 | **Developer Experience** | Easy to work with programmatically? |
-
----
-
-## Project Structure
-
-```
-model-behavior-eval/
-├── app/
-│   ├── page.tsx                    # Dashboard
-│   ├── evaluate/page.tsx           # Evaluation wizard
-│   ├── results/[id]/page.tsx       # Results view
-│   └── api/
-│       └── evaluate/
-│           ├── route.ts            # POST - start eval
-│           └── [id]/stream/route.ts # GET - SSE stream
-├── components/
-│   ├── ui/                         # Design system
-│   ├── dashboard/                  # Dashboard components
-│   ├── evaluate/                   # Wizard components
-│   └── results/                    # Results components
-├── lib/
-│   ├── models/
-│   │   ├── client.ts               # Unified model client
-│   │   ├── anthropic.ts            # Claude adapter
-│   │   └── openai.ts               # GPT adapter
-│   ├── evaluation/
-│   │   ├── runner.ts               # Orchestration (async gen)
-│   │   └── evaluator.ts            # LLM judge scoring
-│   └── data/
-│       ├── use-cases.ts            # Pre-built test suites
-│       ├── dimensions.ts           # Scoring rubrics
-│       └── models.ts               # Model configs
-├── store/
-│   └── evaluation-store.ts         # Zustand state
-└── types/
-    └── index.ts                    # TypeScript types
-```
-
----
-
-## API Reference
-
-### Start Evaluation
-
-```bash
-POST /api/evaluate
-Content-Type: application/json
-
-{
-  "useCaseId": "customer-support",
-  "models": ["claude-sonnet-4-20250514", "gpt-5.2"]
-}
-
-# Response
-{ "id": "550e8400-e29b-41d4-a716-446655440000" }
-```
-
-### Stream Progress
-
-```bash
-GET /api/evaluate/{id}/stream
-Accept: text/event-stream
-
-# Events
-data: {"type":"progress","data":{"currentTest":1,"totalTests":3,"currentModel":"Claude Sonnet 4"}}
-data: {"type":"response","data":{"testId":"cs-001","modelId":"claude-sonnet-4","response":{...}}}
-data: {"type":"scores","data":{"testId":"cs-001","scores":[...]}}
-data: {"type":"complete","data":{...fullResults...}}
-```
-
----
-
-## Supported Models
-
-### Anthropic
-- Claude Opus 4.5 (`claude-opus-4-5-20251101`)
-- Claude Sonnet 4 (`claude-sonnet-4-20250514`)
-- Claude Haiku 3.5 (`claude-3-5-haiku-20241022`)
-
-### OpenAI
-- GPT-5.2 (`gpt-5.2`)
-- GPT-5.2 Mini (`gpt-5.2-mini`)
-- GPT-5 Nano (`gpt-5-nano`)
+| **Refusal Calibration** | Does it refuse appropriately without over-refusing? |
 
 ---
 
 ## Pre-Built Use Cases
+
+### Coding Behavior Analysis (New)
+Tests designed to reveal behavioral differences between model families:
+
+| Test | What It Reveals |
+|------|-----------------|
+| Strict Output Format | Instruction compliance |
+| Security Tool Request | Refusal calibration for legitimate security tasks |
+| Minimal Change Request | Scope creep detection |
+| Ambiguous Requirements | Handling of underspecified tasks |
+| Complex Nested JSON | Schema compliance |
+| Dual-Use Code Request | Context assessment for sensitive use cases |
+| Stack Trace Debugging | Precision in code changes |
+| Multi-File Navigation | Long-context understanding |
 
 ### Customer Support Bot
 - Intent extraction with JSON output
@@ -214,13 +166,67 @@ data: {"type":"complete","data":{...fullResults...}}
 
 ---
 
-## Tech Stack
+## Supported Models
 
-- **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **Streaming:** Server-Sent Events
-- **LLM SDKs:** @anthropic-ai/sdk, openai
+### Anthropic
+- Claude Opus 4.5 (`claude-opus-4-5-20251101`)
+- Claude Sonnet 4 (`claude-sonnet-4-20250514`) — *Used as LLM Judge*
+- Claude Haiku 3.5 (`claude-3-5-haiku-20241022`)
+
+### OpenAI
+- GPT-5.2 (`gpt-5.2`)
+- GPT-5 Mini (`gpt-5-mini`)
+- GPT-5 Nano (`gpt-5-nano`)
+
+---
+
+## Project Structure
+
+```
+model-behavior-eval/
+├── app/
+│   ├── page.tsx                    # Dashboard
+│   ├── evaluate/page.tsx           # Evaluation wizard
+│   ├── results/[id]/page.tsx       # Results view
+│   └── api/
+│       └── evaluate/
+│           ├── route.ts            # POST - start eval
+│           └── [id]/stream/route.ts # GET - SSE stream
+├── components/
+│   ├── ui/                         # Design system
+│   │   ├── button.tsx
+│   │   ├── progress.tsx
+│   │   └── expandable-text.tsx     # For long prompts/responses
+│   ├── dashboard/                  # Dashboard components
+│   ├── evaluate/                   # Wizard components
+│   └── results/                    # Results components
+├── lib/
+│   ├── models/
+│   │   ├── client.ts               # Unified model client
+│   │   ├── anthropic.ts            # Claude adapter
+│   │   └── openai.ts               # GPT adapter (16K token limit)
+│   ├── evaluation/
+│   │   ├── runner.ts               # Orchestration (async generators)
+│   │   ├── evaluator.ts            # LLM judge scoring
+│   │   └── config-store.ts         # Evaluation config persistence
+│   └── data/
+│       ├── use-cases.ts            # Pre-built test suites (8 coding tests)
+│       ├── dimensions.ts           # Scoring rubrics (7 dimensions)
+│       └── models.ts               # Model configs
+├── docs/
+│   └── model-behavior-insights.md  # OpenAI vs Anthropic analysis
+├── outputs/                        # Evaluation results
+│   ├── evaluation-analysis-FINAL.md
+│   ├── evaluation-export-8907c3ab.md
+│   └── followup-email-draft.md
+├── images/                         # Screenshots
+├── store/
+│   └── evaluation-store.ts         # Zustand state
+├── types/
+│   └── index.ts                    # TypeScript types
+├── PRODUCT_STRATEGY.md             # Full product document
+└── README.md
+```
 
 ---
 
@@ -254,6 +260,26 @@ npm run lint
 
 ---
 
-This project demonstrates production-grade AI engineering: streaming architecture, LLM-as-Judge evaluation, multi-provider abstraction, and enterprise-ready design.
+## Key Discovery: Silent Refusals
 
-[View the Full PRD →](./Product-Strategy.md)
+During testing, we discovered reasoning models can "silently refuse" by exhausting their token budget:
+
+```
+API Response: { finish_reason: 'length', content: '' }
+```
+
+**Fix:** Use `max_completion_tokens: 16384` or higher for reasoning models.
+
+See [PRODUCT_STRATEGY.md](./PRODUCT_STRATEGY.md) for details.
+
+---
+
+## Links
+
+- [Product Strategy](./PRODUCT_STRATEGY.md) — Full PRD with architecture
+- [Model Behavior Insights](./docs/model-behavior-insights.md) — OpenAI vs Anthropic analysis
+- [Evaluation Results](./outputs/evaluation-analysis-FINAL.md) — Latest findings
+
+---
+
+Built to demonstrate production-grade AI engineering: streaming architecture, LLM-as-Judge evaluation, multi-provider abstraction, and refusal calibration testing.
