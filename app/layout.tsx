@@ -39,7 +39,7 @@ export default function RootLayout({
               </span>
               <div className="flex items-center gap-6">
                 <a
-                  href="https://github.com/ashstep2/model-behavior-eval/blob/main/Product-Strategy.md"
+                  href="https://github.com/ashstep2/model-behavior-eval/blob/main/PRODUCT_STRATEGY.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-gray-400 transition-colors hover:text-black"
