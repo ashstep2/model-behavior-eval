@@ -13,14 +13,27 @@ export async function GET(
   const { id: evaluationId } = await params;
   const encoder = new TextEncoder();
 
-  // Get evaluation config
-  const config = getEvaluationConfig(evaluationId);
+  // Get evaluation config from store or query params (for serverless compatibility)
+  let config = getEvaluationConfig(evaluationId);
 
   if (!config) {
-    return new Response(
-      JSON.stringify({ error: 'Evaluation not found' }),
-      { status: 404, headers: { 'Content-Type': 'application/json' } }
-    );
+    // Fallback to query params for serverless environments
+    const url = new URL(request.url);
+    const useCaseId = url.searchParams.get('useCaseId');
+    const modelsParam = url.searchParams.get('models');
+
+    if (useCaseId && modelsParam) {
+      config = {
+        useCaseId,
+        models: modelsParam.split(','),
+        startedAt: new Date().toISOString(),
+      };
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Evaluation not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
   const useCase = getUseCase(config.useCaseId);

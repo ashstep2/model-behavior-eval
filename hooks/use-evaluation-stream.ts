@@ -46,9 +46,13 @@ export function useEvaluationStream(options: UseEvaluationStreamOptions = {}) {
 
         const { evaluationId } = await startResponse.json();
 
-        // Connect to SSE stream
+        // Connect to SSE stream with config as query params (for serverless compatibility)
+        const params = new URLSearchParams({
+          useCaseId,
+          models: modelIds.join(','),
+        });
         const eventSource = new EventSource(
-          `/api/evaluate/${evaluationId}/stream`
+          `/api/evaluate/${evaluationId}/stream?${params}`
         );
         eventSourceRef.current = eventSource;
         setIsConnected(true);
