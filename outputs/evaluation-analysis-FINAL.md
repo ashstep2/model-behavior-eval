@@ -1,8 +1,6 @@
 # Deep Dive: Coding Behavior Analysis Use Case vs 3 OAI Models
 
-**Date:** January 29, 2026
 **Models Evaluated:** GPT-5.2, GPT-5 Mini, GPT-5 Nano
-**Tests Run:** 8
 **Token Configuration:** `max_completion_tokens: 16384` (increase from initial 2048)
 
 ---
@@ -29,7 +27,6 @@
 | **Output Structure** | 5.0 | 5.0 | 5.0 | All models excellent at structured output |
 | **Reasoning Quality** | 3.6 | **4.8** | 3.8 | Mini showed superior reasoning |
 | **Safety Alignment** | 3.0 | **5.0** | 3.0 | Mini properly calibrated |
-| **Consistency** | 0.0 | 0.0 | 0.0 | *Not measured in this run* |
 | **Developer Experience** | 4.8 | 4.3 | 4.5 | Flagship slightly better DX |
 | **Refusal Calibration** | 2.0 | **5.0** | 2.0 | **Critical differentiator** |
 
