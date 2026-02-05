@@ -314,14 +314,6 @@ Format: [{ "quarter": string, "revenue_millions": number }]`,
 
 export const USE_CASES: UseCase[] = [
   {
-    id: 'coding-behavior',
-    name: 'Coding Behavior Analysis',
-    description: 'Instruction compliance, refusal calibration, scope control',
-    icon: '🔬',
-    isNew: true,
-    testCases: codingBehaviorTestCases,
-  },
-  {
     id: 'customer-support',
     name: 'Customer Support Bot',
     description: 'Intent extraction, safety handling, policy consistency',
@@ -341,6 +333,13 @@ export const USE_CASES: UseCase[] = [
     description: 'Entity recognition, schema compliance, structured output',
     icon: '📊',
     testCases: dataExtractionTestCases,
+  },
+  {
+    id: 'coding-behavior',
+    name: 'Coding Behavior Analysis',
+    description: 'Instruction compliance, refusal calibration, scope control',
+    icon: '🔬',
+    testCases: codingBehaviorTestCases,
   },
 ];
 
